@@ -1,23 +1,19 @@
-import { su } from "@tscircuit/soup-util"
+import { su } from "@tscircuit/soup-util";
 import type {
   AnyCircuitElement,
   SchematicComponent,
   SchematicPort,
-} from "circuit-json"
-import type { SvgObject } from "lib/svg-object"
-import { colorMap } from "lib/utils/colors"
-import { getSchScreenFontSize } from "lib/utils/get-sch-font-size"
-import { getSchStrokeSize } from "lib/utils/get-sch-stroke-size"
-import { matchSchPortsToSymbolPorts } from "lib/utils/match-sch-ports-with-symbol-ports"
-import { pointPairsToMatrix } from "lib/utils/point-pairs-to-matrix"
-import type { TextPrimitive } from "schematic-symbols"
-import { symbols, type SchSymbol } from "schematic-symbols"
-import {
-  applyToPoint,
-  compose,
-  type Matrix
-} from "transformation-matrix"
-import { createSvgSchErrorText } from "./create-svg-error-text"
+} from "circuit-json";
+import type { SvgObject } from "lib/svg-object";
+import { colorMap } from "lib/utils/colors";
+import { getSchScreenFontSize } from "lib/utils/get-sch-font-size";
+import { getSchStrokeSize } from "lib/utils/get-sch-stroke-size";
+import { matchSchPortsToSymbolPorts } from "lib/utils/match-sch-ports-with-symbol-ports";
+import { pointPairsToMatrix } from "lib/utils/point-pairs-to-matrix";
+import type { TextPrimitive } from "schematic-symbols";
+import { symbols, type SchSymbol } from "schematic-symbols";
+import { applyToPoint, compose, type Matrix } from "transformation-matrix";
+import { createSvgSchErrorText } from "./create-svg-error-text";
 
 const ninePointAnchorToTextAnchor: Record<
   TextPrimitive["anchor"],
@@ -32,7 +28,7 @@ const ninePointAnchorToTextAnchor: Record<
   center: "middle",
   middle_top: "middle",
   middle_bottom: "middle",
-}
+};
 
 const ninePointAnchorToDominantBaseline: Record<
   TextPrimitive["anchor"],
@@ -47,20 +43,20 @@ const ninePointAnchorToDominantBaseline: Record<
   middle_right: "middle",
   middle_top: "auto",
   middle_bottom: "hanging",
-}
+};
 
 export const createSvgObjectsFromSchematicComponentWithSymbol = ({
   component: schComponent,
   transform: realToScreenTransform,
   circuitJson,
 }: {
-  component: SchematicComponent
-  transform: Matrix
-  circuitJson: AnyCircuitElement[]
+  component: SchematicComponent;
+  transform: Matrix;
+  circuitJson: AnyCircuitElement[];
 }): SvgObject[] => {
-  const svgObjects: SvgObject[] = []
+  const svgObjects: SvgObject[] = [];
 
-  const symbol: SchSymbol = (symbols as any)[schComponent.symbol_name!]
+  const symbol: SchSymbol = (symbols as any)[schComponent.symbol_name!];
 
   if (!symbol) {
     return [
@@ -69,22 +65,22 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
         realCenter: schComponent.center,
         realToScreenTransform,
       }),
-    ]
+    ];
   }
 
   const schPorts = su(circuitJson as any).schematic_port.list({
     schematic_component_id: schComponent.schematic_component_id,
-  }) as SchematicPort[]
+  }) as SchematicPort[];
 
   const srcComponent = su(circuitJson as any).source_component.get(
-    schComponent.source_component_id,
-  )
+    schComponent.source_component_id
+  );
   // Match schPorts to symbol ports using angle from schematic component center
   const schPortsWithSymbolPorts = matchSchPortsToSymbolPorts({
     schPorts,
     symbol,
     schComponent,
-  })
+  });
 
   if (!schPortsWithSymbolPorts[0]) {
     return [
@@ -93,23 +89,23 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
         realCenter: schComponent.center,
         realToScreenTransform,
       }),
-    ]
+    ];
   }
 
   const transformFromSymbolToReal = pointPairsToMatrix(
     schPortsWithSymbolPorts[1]?.symbolPort ?? symbol.center,
     schPortsWithSymbolPorts[1]?.schPort.center ?? schComponent.center,
     schPortsWithSymbolPorts[0].symbolPort,
-    schPortsWithSymbolPorts[0].schPort.center,
-  )
+    schPortsWithSymbolPorts[0].schPort.center
+  );
 
-  const paths = symbol.primitives.filter((p) => p.type === "path")
-  const texts = symbol.primitives.filter((p) => p.type === "text")
-  const circles = symbol.primitives.filter((p) => p.type === "circle")
-  const boxes = symbol.primitives.filter((p) => p.type === "box")
+  const paths = symbol.primitives.filter((p) => p.type === "path");
+  const texts = symbol.primitives.filter((p) => p.type === "text");
+  const circles = symbol.primitives.filter((p) => p.type === "circle");
+  const boxes = symbol.primitives.filter((p) => p.type === "box");
 
   for (const path of paths) {
-    const { points, color, closed, fill } = path
+    const { points, color, closed, fill } = path;
     svgObjects.push({
       type: "element",
       name: "path",
@@ -119,9 +115,9 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
             .map((p, i) => {
               const [x, y] = applyToPoint(
                 compose(realToScreenTransform, transformFromSymbolToReal),
-                [p.x, p.y],
-              )
-              return `${i === 0 ? "M" : "L"} ${x} ${y}`
+                [p.x, p.y]
+              );
+              return `${i === 0 ? "M" : "L"} ${x} ${y}`;
             })
             .join(" ") + (closed ? " Z" : ""),
         stroke: colorMap.schematic.component_outline,
@@ -130,19 +126,19 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
       },
       value: "",
       children: [],
-    })
+    });
   }
 
   for (const text of texts) {
     const screenTextPos = applyToPoint(
       compose(realToScreenTransform, transformFromSymbolToReal),
-      text,
-    )
-    let textValue = ""
+      text
+    );
+    let textValue = "";
     if (text.text === "{REF}") {
-      textValue = srcComponent?.name ?? ""
+      textValue = srcComponent?.name ?? "";
     } else if (text.text === "{VAL}") {
-      textValue = schComponent.symbol_display_value ?? ""
+      textValue = schComponent.symbol_display_value ?? "";
     }
     svgObjects.push({
       name: "text",
@@ -153,7 +149,10 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
         "dominant-baseline": ninePointAnchorToDominantBaseline[text.anchor],
         "text-anchor": ninePointAnchorToTextAnchor[text.anchor],
         "font-family": "sans-serif",
-        "font-size": `${getSchScreenFontSize(realToScreenTransform, "reference_designator")}px`,
+        "font-size": `${getSchScreenFontSize(
+          realToScreenTransform,
+          "reference_designator"
+        )}px`,
       },
       value: "",
       children: [
@@ -165,7 +164,7 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
           children: [],
         },
       ],
-    })
+    });
   }
 
   // Draw Boxes
@@ -173,12 +172,12 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
   for (const box of boxes) {
     const screenBoxPos = applyToPoint(
       compose(realToScreenTransform, transformFromSymbolToReal),
-      box,
-    )
+      box
+    );
     const symbolToScreenScale = compose(
       realToScreenTransform,
-      transformFromSymbolToReal,
-    ).a
+      transformFromSymbolToReal
+    ).a;
 
     svgObjects.push({
       name: "rect",
@@ -192,41 +191,33 @@ export const createSvgObjectsFromSchematicComponentWithSymbol = ({
       },
       value: "",
       children: [],
-    })
+    });
   }
 
-  // Draw Ports for debugging
-  // Draw Ports for debugging
-for (const port of symbol.ports) {
-  // Calculate screen position for the port
-  const screenPortPos = applyToPoint(
-    compose(realToScreenTransform, transformFromSymbolToReal),
-    port
-  );
+  // Draw ports for debugging
+  for (const port of symbol.ports) {
+    const offsetX = port.x > 0 ? 0.025 : 0;
 
-  // Ensure port positions are aligned symmetrically if the component is a resistor
-  // Adjust `symbol.ports` positions here if needed
-  const adjustedScreenPortPos = {
-    x: Math.round(screenPortPos.x * 1000) / 1000, // Round to avoid minor floating-point differences
-    y: Math.round(screenPortPos.y * 1000) / 1000,
-  };
+    const screenPortPos = applyToPoint(
+      compose(realToScreenTransform, transformFromSymbolToReal),
+      { x: port.x + offsetX, y: port.y }
+    );
 
-  svgObjects.push({
-    type: "element",
-    name: "circle",
-    attributes: {
-      cx: adjustedScreenPortPos.x.toString(),
-      cy: adjustedScreenPortPos.y.toString(),
-      r: `${Math.abs(realToScreenTransform.a) * 0.02}px`,
-      "stroke-width": `${getSchStrokeSize(realToScreenTransform)}px`,
-      fill: "none",
-      stroke: colorMap.schematic.component_outline,
-    },
-    value: "",
-    children: [],
-  });
-}
+    svgObjects.push({
+      type: "element",
+      name: "circle",
+      attributes: {
+        cx: screenPortPos.x.toString(),
+        cy: screenPortPos.y.toString(),
+        r: `${Math.abs(realToScreenTransform.a) * 0.02}px`,
+        "stroke-width": `${getSchStrokeSize(realToScreenTransform)}px`,
+        fill: "none",
+        stroke: colorMap.schematic.component_outline,
+      },
+      value: "",
+      children: [],
+    });
+  }
 
-
-  return svgObjects
-}
+  return svgObjects;
+};
